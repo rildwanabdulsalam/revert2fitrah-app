@@ -75,3 +75,13 @@ flutter test           # smoke + content tests
 
 The web build serves CanvasKit from the app's own origin (see
 `web/flutter_bootstrap.js`), so it works behind restricted networks.
+
+**Web release builds: run `flutter clean` first** after any change to the
+plugin set in `pubspec.yaml`. `flutter build web` can reuse a cached
+`web_plugin_registrant.dart`, which silently drops newly-added web plugins
+(e.g. `firebase_core_web`) from the bundle — the app then falls back to the
+native method channel and Firebase fails to initialize in the browser:
+
+```sh
+flutter clean && flutter pub get && flutter build web --release
+```
