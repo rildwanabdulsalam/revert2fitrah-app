@@ -5,8 +5,15 @@ import 'package:revert2fitrah/data/prayers.dart';
 import 'package:revert2fitrah/data/surahs.dart';
 import 'package:revert2fitrah/data/verses.dart';
 import 'package:revert2fitrah/main.dart';
+import 'package:revert2fitrah/services/quran_api.dart';
 import 'package:revert2fitrah/state/app_state.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+Future<Revert2FitrahApp> buildApp() async {
+  final state = await AppState.load();
+  final prefs = await SharedPreferences.getInstance();
+  return Revert2FitrahApp(state: state, quranApi: QuranApiService(prefs));
+}
 
 void main() {
   setUp(() {
@@ -34,8 +41,8 @@ void main() {
   });
 
   testWidgets('signed-out launch shows onboarding', (tester) async {
-    final state = await AppState.load();
-    await tester.pumpWidget(Revert2FitrahApp(state: state));
+    final app = await buildApp();
+    await tester.pumpWidget(app);
     await tester.pumpAndSettle();
 
     expect(find.text('Revert2Fitrah'), findsOneWidget);
@@ -48,8 +55,8 @@ void main() {
       'user.name': 'Amina',
       'user.email': 'amina@example.com',
     });
-    final state = await AppState.load();
-    await tester.pumpWidget(Revert2FitrahApp(state: state));
+    final app = await buildApp();
+    await tester.pumpWidget(app);
     await tester.pumpAndSettle();
 
     // Home tab: profile + settings.

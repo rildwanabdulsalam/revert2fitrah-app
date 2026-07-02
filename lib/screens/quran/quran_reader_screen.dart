@@ -1,19 +1,22 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:just_audio/just_audio.dart';
 import 'package:provider/provider.dart';
 
 import '../../data/models.dart';
 import '../../data/verses.dart';
+import '../../services/quran_api.dart';
 import '../../state/app_state.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
 
 /// Verse-by-verse reader with the floating audio bar (mock 2d).
 ///
-/// "Playback" is simulated: a timer sweeps the progress bar and advances to
-/// the next verse, standing in for the real recitation audio that arrives
-/// with the licensed dataset.
+/// Text comes from the bundled samples (Al-Fatihah, Al-Mulk, Al-Ikhlas) or is
+/// fetched once from the Al Quran Cloud API and cached. Recitation audio
+/// streams per verse from the same project's CDN (Alafasy, 128kbps) and
+/// advances to the next verse automatically.
 class QuranReaderScreen extends StatefulWidget {
   const QuranReaderScreen({super.key, required this.surah});
 
@@ -32,15 +35,18 @@ class QuranReaderScreen extends StatefulWidget {
 class _QuranReaderScreenState extends State<QuranReaderScreen> {
   static const _textScales = [0.9, 1.0, 1.15];
   static const _speeds = [1.0, 1.25, 1.5, 0.75];
-  static const _verseSeconds = 24.0;
 
-  late final List<Verse> _verses = kSampleVerses[widget.surah.number] ?? [];
+  List<Verse>? _verses;
+  String? _loadError;
+
   late int _currentVerse; // 1-based
+  final _player = AudioPlayer();
+  StreamSubscription<PlayerState>? _playerStateSub;
+  StreamSubscription<Duration>? _positionSub;
   var _playing = false;
   var _progress = 0.0;
   var _scaleIndex = 1;
   var _speedIndex = 0;
-  Timer? _ticker;
 
   @override
   void initState() {
@@ -51,48 +57,119 @@ class _QuranReaderScreenState extends State<QuranReaderScreen> {
         : 1;
     // Opening a surah makes it the "continue reading" surah.
     state.setReadingPosition(widget.surah.number, _currentVerse);
+
+    _playerStateSub = _player.playerStateStream.listen((playerState) {
+      if (playerState.processingState == ProcessingState.completed) {
+        _onVerseAudioComplete();
+      }
+    });
+    _positionSub = _player.positionStream.listen((position) {
+      final duration = _player.duration;
+      if (duration == null || duration.inMilliseconds == 0 || !_playing) {
+        return;
+      }
+      setState(() {
+        _progress =
+            (position.inMilliseconds / duration.inMilliseconds).clamp(0.0, 1.0);
+      });
+    });
+
+    _loadVerses();
   }
 
   @override
   void dispose() {
-    _ticker?.cancel();
+    _playerStateSub?.cancel();
+    _positionSub?.cancel();
+    _player.dispose();
     super.dispose();
   }
 
-  void _togglePlay() {
-    if (_verses.isEmpty) {
-      showComingSoon(context, 'Recitation audio for this surah');
+  Future<void> _loadVerses() async {
+    final bundled = kSampleVerses[widget.surah.number];
+    if (bundled != null) {
+      setState(() => _verses = bundled);
       return;
     }
-    setState(() => _playing = !_playing);
-    _ticker?.cancel();
+    setState(() {
+      _verses = null;
+      _loadError = null;
+    });
+    try {
+      final verses = await context.read<QuranApiService>().fetchSurah(
+        widget.surah.number,
+      );
+      if (!mounted) return;
+      setState(() => _verses = verses);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _loadError = e is QuranApiException
+            ? e.message
+            : 'Couldn\'t reach the Quran service. '
+                  'Check your connection and try again.';
+      });
+    }
+  }
+
+  // ---- Audio ----
+
+  Future<void> _togglePlay() async {
     if (_playing) {
-      _ticker = Timer.periodic(const Duration(milliseconds: 120), (_) {
-        setState(() {
-          _progress += 0.12 * _speeds[_speedIndex] / _verseSeconds;
-          if (_progress >= 1) {
-            _progress = 0;
-            if (_currentVerse < _verses.length) {
-              _setVerse(_currentVerse + 1);
-            } else {
-              _playing = false;
-              _ticker?.cancel();
-            }
-          }
-        });
+      setState(() => _playing = false);
+      await _player.pause();
+      return;
+    }
+    await _playVerse(_currentVerse);
+  }
+
+  Future<void> _playVerse(int verse) async {
+    setState(() {
+      _playing = true;
+      _progress = 0;
+      _setVerse(verse);
+    });
+    try {
+      await _player.setUrl(
+        verseAudioUrl(widget.surah.number, verse),
+      );
+      await _player.setSpeed(_speeds[_speedIndex]);
+      unawaited(_player.play());
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _playing = false);
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Couldn\'t load the recitation audio — check your connection.',
+            ),
+          ),
+        );
+    }
+  }
+
+  void _onVerseAudioComplete() {
+    if (!mounted || !_playing) return;
+    if (_currentVerse < widget.surah.verseCount) {
+      _playVerse(_currentVerse + 1);
+    } else {
+      setState(() {
+        _playing = false;
+        _progress = 0;
       });
     }
   }
 
   void _setVerse(int verse) {
     _currentVerse = verse;
-    context
-        .read<AppState>()
-        .setReadingPosition(widget.surah.number, verse);
+    context.read<AppState>().setReadingPosition(widget.surah.number, verse);
   }
 
-  void _cycleSpeed() {
+  Future<void> _cycleSpeed() async {
     setState(() => _speedIndex = (_speedIndex + 1) % _speeds.length);
+    await _player.setSpeed(_speeds[_speedIndex]);
   }
 
   void _cycleTextSize() {
@@ -106,6 +183,7 @@ class _QuranReaderScreenState extends State<QuranReaderScreen> {
       (s) => s.transliteration,
     );
     final scale = _textScales[_scaleIndex];
+    final verses = _verses;
 
     return Scaffold(
       appBar: AppBar(
@@ -133,15 +211,23 @@ class _QuranReaderScreenState extends State<QuranReaderScreen> {
       ),
       body: Stack(
         children: [
-          if (_verses.isEmpty)
-            _PendingTextNotice(surah: widget.surah)
+          if (_loadError != null)
+            _LoadErrorNotice(
+              surah: widget.surah,
+              message: _loadError!,
+              onRetry: _loadVerses,
+            )
+          else if (verses == null)
+            const Center(
+              child: CircularProgressIndicator(color: AppColors.green),
+            )
           else
             ListView.separated(
               padding: const EdgeInsets.fromLTRB(20, 8, 20, 140),
-              itemCount: _verses.length,
+              itemCount: verses.length,
               separatorBuilder: (_, _) => const SizedBox(height: 14),
               itemBuilder: (context, i) {
-                final verse = _verses[i];
+                final verse = verses[i];
                 final isCurrent = verse.number == _currentVerse;
                 return _VerseCard(
                   verse: verse,
@@ -149,10 +235,16 @@ class _QuranReaderScreenState extends State<QuranReaderScreen> {
                   playing: _playing && isCurrent,
                   showTransliteration: showTransliteration,
                   scale: scale,
-                  onTap: () => setState(() {
-                    _progress = 0;
-                    _setVerse(verse.number);
-                  }),
+                  onTap: () {
+                    if (_playing) {
+                      _playVerse(verse.number);
+                    } else {
+                      setState(() {
+                        _progress = 0;
+                        _setVerse(verse.number);
+                      });
+                    }
+                  },
                 );
               },
             ),
@@ -223,7 +315,7 @@ class _VerseCard extends StatelessWidget {
               ),
               const Spacer(),
               if (playing) ...[
-                Text(
+                const Text(
                   'Playing',
                   style: TextStyle(
                     fontSize: 12,
@@ -280,10 +372,16 @@ class _VerseCard extends StatelessWidget {
   }
 }
 
-class _PendingTextNotice extends StatelessWidget {
-  const _PendingTextNotice({required this.surah});
+class _LoadErrorNotice extends StatelessWidget {
+  const _LoadErrorNotice({
+    required this.surah,
+    required this.message,
+    required this.onRetry,
+  });
 
   final Surah surah;
+  final String message;
+  final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
@@ -303,7 +401,7 @@ class _PendingTextNotice extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             Text(
-              '${surah.name} — text coming soon',
+              'Couldn\'t load ${surah.name}',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
@@ -312,9 +410,7 @@ class _PendingTextNotice extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'The full, scholar-reviewed Quran text and audio arrive with '
-              'the licensed dataset. Al-Fatihah, Al-Mulk, and Al-Ikhlas are '
-              'available now as a preview.',
+              message,
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 13.5,
@@ -322,6 +418,8 @@ class _PendingTextNotice extends StatelessWidget {
                 color: palette.inkMuted,
               ),
             ),
+            const SizedBox(height: 20),
+            FilledButton(onPressed: onRetry, child: const Text('Try again')),
           ],
         ),
       ),

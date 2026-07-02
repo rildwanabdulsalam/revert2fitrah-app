@@ -9,14 +9,20 @@ Five tabs behind a floating pill nav, plus onboarding and auth:
 
 - **Onboarding** — 3-page welcome on the deep-green arch-motif hero, leading
   into sign up / log in.
-- **Sign up / Log in** — name, email, password with validation. Auth is a
-  local mock behind the `AuthService` interface (`lib/state/app_state.dart`);
-  Firebase Auth plugs in behind the same seam.
+- **Sign up / Log in** — name, email, password with validation and friendly
+  error states. Firebase Auth (email/password) with Firestore state sync is
+  fully wired; until `flutterfire configure` supplies real config the app
+  runs on an on-device mock behind the same `AuthService` seam
+  (`lib/services/auth_service.dart`). Console setup: see FIREBASE_SETUP.md.
 - **Home** — profile, reminder toggles (prayer times, Dua of the Day), reading
   preferences (transliteration, dark mode, language), account row, sign out.
 - **Quran** — searchable list of all 114 surahs, "continue reading" card, and
   a verse reader with transliteration, translation, adjustable text size
-  ("Aa"), and a simulated audio bar with playback speed.
+  ("Aa"), and per-verse recitation audio with speed control. Al-Fatihah,
+  Al-Mulk, and Al-Ikhlas are bundled for offline/instant use; every other
+  surah is fetched once from the Al Quran Cloud API and cached on device
+  (`lib/services/quran_api.dart`). Audio streams from the same project's CDN
+  (Mishary Rashid Alafasy, 128kbps) and auto-advances verse by verse.
 - **Solat** — the five daily prayers with rak'ah counts and learning state,
   the Wudu lesson (8 steps) as the "start here" card, and a step-by-step
   lesson player (10 steps per prayer) with segmented progress, posture
@@ -37,16 +43,21 @@ green `#16624C`, gold `#D9A521` for "now/next" and sacred markers, white cards
 at r20–26, floating pill nav. Type: Lora (display), Inter (UI), Amiri
 (Arabic) — all bundled under `assets/fonts` (SIL Open Font License).
 
-## Placeholder content — read before shipping
+## Content status
 
-Per the Phase 1 spec, several content sets are **placeholders pending the
-vetted, licensed dataset and scholar review**:
+Live now:
 
-- Quran text: only Al-Fatihah, Al-Mulk, and Al-Ikhlas ship as samples
-  (`lib/data/verses.dart`, generated from the public
-  [quran-json](https://github.com/risan/quran-json) dataset). Other surahs
-  show a "text coming soon" state.
-- Audio (recitation, lesson steps, duas) is simulated or stubbed.
+- Quran text, translation (Saheeh International), transliteration, and
+  recitation audio come from the [Al Quran Cloud](https://alquran.cloud/api)
+  API/CDN, cached per surah after first fetch. Three surahs are also bundled
+  for offline use (`lib/data/verses.dart`).
+- Auth + cloud sync via Firebase once configured (FIREBASE_SETUP.md).
+
+Still **placeholder pending vetted sources and scholar review** (per the
+Phase 1 plan):
+
+- Duas and Solat lesson content (text ships in-app but awaits review;
+  step/dua audio is stubbed).
 - Lesson posture illustrations are hatched placeholders awaiting real,
   scholar-reviewed photography/illustration.
 - Prayer times are static hints; a location-aware calculation engine is

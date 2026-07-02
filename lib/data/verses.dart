@@ -1,13 +1,12 @@
 // GENERATED from the quran-json dataset (github.com/risan/quran-json).
 //
-// PLACEHOLDER CONTENT — Phase 1 ships sample text for a handful of surahs so
-// the reader flow can be exercised. The vetted, licensed Quran dataset
-// (text, translation, and audio) replaces this before release; see README.
+// Offline-bundled surahs. All other surahs are fetched on demand from the
+// Al Quran Cloud API and cached on device (see services/quran_api.dart).
 
 import 'models.dart';
 
-/// Sample verse text keyed by surah number. Surahs without an entry show the
-/// "text coming soon" state in the reader.
+/// Bundled verse text keyed by surah number, available instantly and
+/// offline. Surahs without an entry load through QuranApiService.
 const Map<int, List<Verse>> kSampleVerses = {
   1: [
     Verse(number: 1, arabic: 'بِسۡمِ ٱللَّهِ ٱلرَّحۡمَٰنِ ٱلرَّحِيمِ', transliteration: 'Bismi Allahi alrrahmani alrraheemi', translation: 'In the name of Allah, the Entirely Merciful, the Especially Merciful'),
