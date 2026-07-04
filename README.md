@@ -76,7 +76,19 @@ flutter test           # smoke + content tests
 The web build serves CanvasKit from the app's own origin (see
 `web/flutter_bootstrap.js`), so it works behind restricted networks.
 
-**Web release builds: run `flutter clean` first** after any change to the
+### Android APK
+
+CI builds an installable release APK on every app-code change to `main`
+(`.github/workflows/android-apk.yml`) — grab it from the run's **Artifacts**
+in the GitHub Actions tab, no local Android toolchain needed. To build
+locally instead: `flutter build apk --release` (output at
+`build/app/outputs/flutter-apk/app-release.apk`). The Android app ID is
+`com.revert2fitrah.app`, matching the Firebase registration and
+`android/app/google-services.json`; Firebase Auth requires `minSdk 23`.
+
+### Web builds
+
+**Run `flutter clean` first** after any change to the
 plugin set in `pubspec.yaml`. `flutter build web` can reuse a cached
 `web_plugin_registrant.dart`, which silently drops newly-added web plugins
 (e.g. `firebase_core_web`) from the bundle — the app then falls back to the

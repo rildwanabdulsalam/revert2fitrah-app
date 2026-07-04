@@ -1,10 +1,9 @@
 // Firebase configuration for the revert2fitrah project.
 //
-// Web is registered and live. Android and iOS still carry placeholder
-// values — on those platforms the app falls back to the on-device mock auth
-// until the apps are registered in the Firebase console (Project settings →
-// Your apps) and their values are filled in here, either by hand or by
-// running `flutterfire configure`. See FIREBASE_SETUP.md.
+// Web and Android are registered and live. iOS still carries placeholder
+// values — on iOS the app falls back to the on-device mock auth until the
+// iOS app is registered in the Firebase console (Project settings → Your
+// apps) and its values are filled in here. See FIREBASE_SETUP.md.
 
 import 'package:firebase_core/firebase_core.dart' show FirebaseOptions;
 import 'package:flutter/foundation.dart'
@@ -34,8 +33,8 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'REPLACE_WITH_ANDROID_APP_VALUES',
-    appId: 'REPLACE',
+    apiKey: 'AIzaSyBpLKcheEYK2se_0k9IgIBKf3TDih9yjnE',
+    appId: '1:781321626682:android:07bfeb1399c9a8761c4103',
     messagingSenderId: '781321626682',
     projectId: 'revert2fitrah',
     storageBucket: 'revert2fitrah.firebasestorage.app',

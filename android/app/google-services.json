@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "781321626682",
+    "project_id": "revert2fitrah",
+    "storage_bucket": "revert2fitrah.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:781321626682:android:07bfeb1399c9a8761c4103",
+        "android_client_info": {
+          "package_name": "com.revert2fitrah.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "781321626682-folcpi7s0v24102dm14rki5tm6ht0nhp.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBpLKcheEYK2se_0k9IgIBKf3TDih9yjnE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "781321626682-folcpi7s0v24102dm14rki5tm6ht0nhp.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

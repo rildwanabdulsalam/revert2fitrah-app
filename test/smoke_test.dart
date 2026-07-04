@@ -5,13 +5,17 @@ import 'package:revert2fitrah/data/prayers.dart';
 import 'package:revert2fitrah/data/surahs.dart';
 import 'package:revert2fitrah/data/verses.dart';
 import 'package:revert2fitrah/main.dart';
+import 'package:revert2fitrah/services/auth_service.dart';
 import 'package:revert2fitrah/services/quran_api.dart';
 import 'package:revert2fitrah/state/app_state.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Future<Revert2FitrahApp> buildApp() async {
-  final state = await AppState.load();
+  // Inject on-device auth so tests stay hermetic and never reach out to
+  // Firebase (Firebase.initializeApp has no platform channel under
+  // `flutter test` and would hang).
   final prefs = await SharedPreferences.getInstance();
+  final state = await AppState.load(authOverride: LocalAuthService(prefs));
   return Revert2FitrahApp(state: state, quranApi: QuranApiService(prefs));
 }
 
