@@ -25,8 +25,8 @@ android {
         // Must match the Android app registered in Firebase and the
         // package_name in google-services.json.
         applicationId = "com.revert2fitrah.app"
-        // firebase_auth 6.x requires a minimum of API 23.
-        minSdk = maxOf(flutter.minSdkVersion, 23)
+        // firebase_auth needs API 23+, audio_session (via just_audio) needs 24.
+        minSdk = maxOf(flutter.minSdkVersion, 24)
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName

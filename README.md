@@ -84,7 +84,8 @@ in the GitHub Actions tab, no local Android toolchain needed. To build
 locally instead: `flutter build apk --release` (output at
 `build/app/outputs/flutter-apk/app-release.apk`). The Android app ID is
 `com.revert2fitrah.app`, matching the Firebase registration and
-`android/app/google-services.json`; Firebase Auth requires `minSdk 23`.
+`android/app/google-services.json`; `minSdk` is 24 (Firebase Auth needs
+23, `audio_session` via `just_audio` needs 24).
 
 ### Web builds
 
